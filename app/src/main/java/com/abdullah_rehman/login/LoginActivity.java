@@ -31,7 +31,9 @@ public class LoginActivity extends AppCompatActivity {
     ProgressDialog dialog;
     EditText etEmail, etPassword;
     Button btnLogin;
+    Button btnForgetPassword;
     AlertDialog.Builder alertDialog;
+    AlertDialog.Builder alertPassword;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,10 +49,19 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
+        alertPassword = new AlertDialog.Builder(LoginActivity.this);
+        alertPassword.setTitle("Your Password is...");
+        alertPassword.setPositiveButton("Okay", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                dialogInterface.cancel();
+            }
+        });
 
         etEmail = (EditText) findViewById(R.id.etEmail);
-        etPassword = (EditText) findViewById(R.id.etPassword);
         btnLogin = (Button) findViewById(R.id.btnLogin);
+        etPassword = (EditText) findViewById(R.id.etPassword);
+        btnForgetPassword=(Button)findViewById(R.id.btnForgetPassword);
 
         btnLogin.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -65,6 +76,21 @@ public class LoginActivity extends AppCompatActivity {
                     LoginTask loginTask = new LoginTask();
                     loginTask.execute(email, password);
 //                    new BackgroundWorker(LoginActivity.this).execute(email,password);
+                }
+            }
+        });
+
+        btnForgetPassword.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String email = etEmail.getText().toString();
+
+                if (TextUtils.isEmpty(email)) {
+
+                } else {
+                    ShowPasswordTask showPasswordTask = new ShowPasswordTask();
+                    showPasswordTask.execute(email);
+//                    new BackgroundWorker(LoginActivity.this).execute(email);
                 }
             }
         });
@@ -148,6 +174,83 @@ public class LoginActivity extends AppCompatActivity {
                     JSONObject object = new JSONObject(response);
                     alertDialog.setMessage("Welcome " + object.getString("name"));
                     alertDialog.show();
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+                Toast.makeText(LoginActivity.this, "Success", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    class ShowPasswordTask extends AsyncTask<String, Void, String> {
+
+        @Override
+        protected void onPreExecute() {
+//            super.onPreExecute();
+            dialog = new ProgressDialog(LoginActivity.this);
+            dialog.setCancelable(false);
+            dialog.setMessage("Please wait");
+            dialog.show();
+
+        }
+
+        @Override
+        protected String doInBackground(String... params) {
+            String email = params[0];
+            //String password = params[1];
+            String urlString = "http://rehmanian.000webhostapp.com/forgetPassword.php";
+            try {
+                URL url = new URL(urlString);
+
+                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setRequestMethod("GET");
+                httpURLConnection.setDoOutput(true);
+                httpURLConnection.setDoInput(true);
+
+                OutputStream outputStream = httpURLConnection.getOutputStream();
+                BufferedWriter bufferedWriter = new BufferedWriter(new OutputStreamWriter(outputStream, "UTF-8"));
+
+                String parameters = URLEncoder.encode("email", "UTF-8") + "=" + URLEncoder.encode(email, "UTF-8");
+                bufferedWriter.write(parameters);
+
+                bufferedWriter.flush();
+                bufferedWriter.close();
+                outputStream.close();
+
+                InputStream inputStream = httpURLConnection.getInputStream();
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream, "iso-8859-1"));
+
+                String result = "";
+                String line = "";
+                while ((line = bufferedReader.readLine()) != null) {
+                    result = result + line;
+                }
+
+                bufferedReader.close();
+                outputStream.close();
+                httpURLConnection.disconnect();
+
+                return result;
+
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return "Error";
+        }
+
+        @Override
+        protected void onPostExecute(String response) {
+//            super.onPostExecute(aVoid);
+            dialog.cancel();
+            if (response.contains("Error")) {
+                Toast.makeText(LoginActivity.this, "Error", Toast.LENGTH_SHORT).show();
+            } else {
+                try {
+                    JSONObject object = new JSONObject(response);
+                    alertPassword.setMessage("Password : " + object.getString("password"));
+                    alertPassword.show();
                 } catch (JSONException e) {
                     e.printStackTrace();
                 }
